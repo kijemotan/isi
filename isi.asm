@@ -74,9 +74,9 @@ start:
 
   lda #(1<<4 + ^CONTENT)  ; address increment - 1, highest bit of address
   sta V_ADDR0_H
-  lda #<CONTENT           ; middle byte of address
+  lda #>CONTENT           ; middle byte of address
   sta V_ADDR0_M
-  lda #>CONTENT           ; low byte of address
+  lda #<CONTENT           ; low byte of address
   sta V_ADDR0_L
   
   lda #$DE
