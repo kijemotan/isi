@@ -1,0 +1,41 @@
+ca65 V2.19 - Git 05cd805cb
+Main file   : isi.asm
+Current file: isi.asm
+
+000000r 1               .org $080d
+00080D  1               .segment "STARTUP"
+00080D  1               .segment "INIT"
+00080D  1               .segment "ONCE"
+00080D  1               .segment "CODE"
+00080D  1               
+00080D  1               CHROUT  = $ffd2
+00080D  1               
+00080D  1               print_hex:
+00080D  1  48             pha           ; push original a to stack
+00080E  1  4A             lsr
+00080F  1  4A             lsr
+000810  1  4A             lsr
+000811  1  4A             lsr           ; a = a >> 4
+000812  1  20 1C 08       jsr print_hex_digit
+000815  1  68             pla           ; pull original a back from stack
+000816  1  29 0F          and #$0f      ; a = a & 0b00001111
+000818  1  20 1C 08       jsr print_hex_digit
+00081B  1  60             rts
+00081C  1               print_hex_digit:
+00081C  1  C9 0A          cmp #$0a
+00081E  1  10 04          bpl @letter
+000820  1  09 30          ora #$30      ; petscii numbers: 1=$31, 2=$32, etc.
+000822  1  80 03          bra @print
+000824  1               @letter:
+000824  1  18             clc
+000825  1  69 37          adc #$37      ; petscii letters: a=$41, b=$42, etc.
+000827  1               @print:
+000827  1  20 D2 FF       jsr CHROUT
+00082A  1  60             rts
+00082B  1               
+00082B  1               start:
+00082B  1               
+00082B  1  A5 00          lda $0000
+00082D  1  20 0D 08       jsr print_hex
+000830  1  60             rts
+000830  1               
