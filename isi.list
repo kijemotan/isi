@@ -22,52 +22,76 @@ Current file: isi.asm
 00080D  1               ; $04001-$0FFFF -> text
 00080D  1               
 00080D  1               ; KERNAL calls
-00080D  1               CHROUT  = $FFD2
 00080D  1               LOAD    = $FFD5
 00080D  1               SETLFS  = $FFBA
 00080D  1               SETNAM  = $FFBD
 00080D  1               
 00080D  1               ; VERA registers
-00080D  1               V_CTRL      = $9F25
-00080D  1               V_DC_VIDEO  = $9F29
-00080D  1               V_L0_CONFIG = $9F2D
+00080D  1               V_ADDR0_L     = $9F20
+00080D  1               V_ADDR0_M     = $9F21
+00080D  1               V_ADDR0_H     = $9F22
+00080D  1               V_DATA0       = $9F23
+00080D  1               V_CTRL        = $9F25
+00080D  1               V_DC_VIDEO    = $9F29
+00080D  1               V_L0_CONFIG   = $9F2D
+00080D  1               V_L0_MAPBASE  = $9F2E
+00080D  1               V_L0_TILEBASE = $9F2F
 00080D  1               
 00080D  1               ; VRAM addresses
 00080D  1               CHARSET = $00000
-00080D  1               CONTENT = $04001
+00080D  1               CONTENT = $04000
 00080D  1               
-00080D  1               print_hex:
-00080D  1  48             pha           ; push original a to stack
-00080E  1  4A             lsr
-00080F  1  4A             lsr
-000810  1  4A             lsr
-000811  1  4A             lsr           ; a = a >> 4
-000812  1  20 1C 08       jsr print_hex_digit
-000815  1  68             pla           ; pull original a back from stack
-000816  1  29 0F          and #$0f      ; a = a & 0b00001111
-000818  1  20 1C 08       jsr print_hex_digit
-00081B  1  60             rts
-00081C  1               print_hex_digit:
-00081C  1  C9 0A          cmp #$0a
-00081E  1  10 04          bpl @letter
-000820  1  09 30          ora #$30      ; petscii numbers: 1=$31, 2=$32, etc.
-000822  1  80 03          bra @print
-000824  1               @letter:
-000824  1  18             clc
-000825  1  69 37          adc #$37      ; petscii letters: a=$41, b=$42, etc.
-000827  1               @print:
-000827  1  20 D2 FF       jsr CHROUT
-00082A  1  60             rts
-00082B  1               
-00082B  1               start:
-00082B  1               
-00082B  1  9C 25 9F       stz V_CTRL
-00082E  1  A9 51          lda #%01010001  ; VGA, layer 0, sprites
-000830  1  8D 29 9F       sta V_DC_VIDEO
-000833  1               
-000833  1                 ; h=32(0), w=128(2), t256c(1), !bitmap(0), 1bpp(0)
-000833  1  A9 28          lda #(0<<6 + 2<<4 + 1<<3 + 0<<2 + 0)
-000835  1  8D 2D 9F       sta V_L0_CONFIG
-000838  1               
-000838  1  60             rts
-000838  1               
+00080D  1  46 4F 4E 54  FONT: .literal "FONT.BIN"
+000811  1  2E 42 49 4E  
+000815  1               
+000815  1               start:
+000815  1               
+000815  1  9C 25 9F       stz V_CTRL
+000818  1  A9 51          lda #%01010001  ; VGA, layer 0, sprites
+00081A  1  8D 29 9F       sta V_DC_VIDEO
+00081D  1               
+00081D  1                 ; h=32(0), w=128(2), t256c(0), !bitmap(0), 1bpp(0)
+00081D  1  A9 20          lda #(0<<6 + 2<<4 + 0<<3 + 0<<2 + 0)
+00081F  1  8D 2D 9F       sta V_L0_CONFIG
+000822  1               
+000822  1  A9 20          lda #(CONTENT>>9)
+000824  1  8D 2E 9F       sta V_L0_MAPBASE
+000827  1               
+000827  1                 ; tilebase address = $00000, h=16(1), w=8(0)
+000827  1  A9 02          lda #%00000010
+000829  1  8D 2F 9F       sta V_L0_TILEBASE
+00082C  1               
+00082C  1                 ; load charset
+00082C  1  A9 08          lda #$08  ; filename length
+00082E  1  A2 0D          ldx #<FONT
+000830  1  A0 08          ldy #>FONT
+000832  1  20 BD FF       jsr SETNAM
+000835  1               
+000835  1  A9 01          lda #$01  ; logical file number - 1
+000837  1  A2 08          ldx #$08  ; device number - SD card
+000839  1  A0 00          ldy #$00  ; secondary address - load
+00083B  1  20 BA FF       jsr SETLFS
+00083E  1               
+00083E  1  A9 02          lda #$02  ; load location - VRAM from $00000
+000840  1  A2 00          ldx #<CHARSET
+000842  1  A0 00          ldy #>CHARSET
+000844  1  20 D5 FF       jsr LOAD
+000847  1               
+000847  1  A9 10          lda #(1<<4 + ^CONTENT)  ; address increment - 1, highest bit of address
+000849  1  8D 22 9F       sta V_ADDR0_H
+00084C  1  A9 00          lda #<CONTENT           ; middle byte of address
+00084E  1  8D 21 9F       sta V_ADDR0_M
+000851  1  A9 40          lda #>CONTENT           ; low byte of address
+000853  1  8D 20 9F       sta V_ADDR0_L
+000856  1               
+000856  1  A9 DE          lda #$DE
+000858  1  8D 23 9F       sta V_DATA0
+00085B  1  A9 01          lda #$01
+00085D  1  8D 23 9F       sta V_DATA0
+000860  1  A9 60          lda #$60
+000862  1  8D 23 9F       sta V_DATA0
+000865  1  A9 01          lda #$01
+000867  1  8D 23 9F       sta V_DATA0
+00086A  1               
+00086A  1  60             rts
+00086A  1               
