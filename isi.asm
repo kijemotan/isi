@@ -131,6 +131,7 @@ L1_checkaddr:
   bne L1_clearloop
 L1_escape:
   
+  
 
 ; lda #$08  ; TEXT filename length
 ; ldx #<TEXT
