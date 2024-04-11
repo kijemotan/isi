@@ -54,8 +54,10 @@ INDEX_L = $36       ; low byte of 16 bit address
 INDEX_H = $37       ; high byte of 16 bit address
 AUTHOR  = $38       ; author name (to $37 - 16 bytes)
 TITLE   = $48       ; title name (to $67 - 32 bytes)
-TVRAM_L = $49       ; \_ temp storage for old VRAM address \
-TVRAM_M = $4A       ; /- used in `cartouche`               /
+TVRAM_L = $49       ; \_ temp storage for old VRAM address
+TVRAM_M = $4A       ; /- used in `cartouche`
+LINE = $4B       ; current line
+COLUMN  = $4C       ; current column
 TXSTART = $A000     ; text data start (to $BFFF - 2048 bytes)
 
 FONT: .literal "FONT.BIN"
@@ -65,9 +67,10 @@ TEXT: .literal "TEXT.ISI"
 DEFAULTCLR: .byte $44,$04,$FF,$0F,$44,$0F,$F4,$0F,$F4,$04,$FF,$04,$4F,$04,$4F,$0F
 ; ca65 is deciding to only store 6 of them in the list file. wtf.
 
-;                   ni  li  pona ala pona    cs  c3  T   cs  c4  E   c6  S   T       soweli sewi sc  monsi .   tan :   ec  eof
-TESTMESSAGE: .byte $B1,$92,$C5, $62,$C5,$10,$F8,$F3,$54,$F8,$F4,$45,$F6,$53,$54,$10,$D4,   $CB, $ED,$A5,  $EB,$D9,$EC,$EE,$FF
+;                   ni  li  pona ala pona    cs  c3  T   cs  c4  E   c6  S   T       soweli sewi sc  monsi .   tan :   ec  nl  c2  cs  c1  mi  wawa a   nl  1   tb  mi  ike ala nl  2   tb  mi  ike ala eof
+TESTMESSAGE: .byte $B1,$92,$C5, $62,$C5,$10,$F8,$F3,$54,$F8,$F4,$45,$F6,$53,$54,$10,$D4,   $CB, $ED,$A5,  $EB,$D9,$EC,$EE,$F9,$f2,$f8,$F1,$A0,$E8, $60,$F9,$01,$FA,$A0,$6F,$62,$F9,$02,$FA,$A0,$6F,$62,$FF
 
+;TESTMESSAGE: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,$FF
 ;-----------------------------
 
 start:
@@ -148,6 +151,11 @@ start:
   bra :-
 
 : jsr update
+
+; loop:
+;   inc TESTMESSAGE
+;   jsr update
+;   bra loop
 
   rts
 
@@ -256,7 +264,7 @@ nextindex:
 
 update:
 
-  stp
+; stp
 
   lda #(1<<4 + ^L0_START) ; set cursor to upper left
   sta V_ADDRx_H
@@ -264,6 +272,9 @@ update:
   sta V_ADDRx_M
   lda #<L0_START
   sta V_ADDRx_L 
+
+  stz COLUMN
+  stz LINE
 
   lda #<TXSTART
   sta INDEX_L
@@ -292,11 +303,20 @@ checkchar:
 : pla
 
   sta V_DATA0   ; show the character
+  inc COLUMN    ; increment character
   
   cmp #$ED      ; character == $ED? (cartouche start)
   bcc :+        ; if not, branch
   lda #$01      ; cartouche on
   sta CARTCHE
+
+: lda COLUMN
+  cmp #$50
+  bne :+
+  lda CURCLR
+  sta V_DATA0
+  jsr nextline
+  bra nextindex
 
 : lda CURCLR
   sta V_DATA0
@@ -305,7 +325,11 @@ checkchar:
 
 checkmeta:
 
-  cmp #$F8      ; character >= $F8?
+  cmp #$FA
+  bne :+
+  jsr tab
+
+: cmp #$F8      ; character >= $F8?
   bcs :+        ; if yes, branch
   jsr setcolour
   rts
@@ -316,6 +340,10 @@ checkmeta:
   eor #1
   sta CLRSEL
   pla
+
+: cmp #$F9
+  bne :+
+  jsr nextline
 
 : rts
 
@@ -374,5 +402,32 @@ cartouche:
   stz V_CTRL  ; ADDRSEL = 0 -> data port 0 selected
   ; no need to restore TVRAM_# to V_ADDRx_#
   ; since they haven't changed
+
+  rts
+
+nextline:
+
+; stp
+
+  stz COLUMN
+  inc LINE      ; next line
+  stz V_ADDRx_L
+  inc V_ADDRx_M
+  stz CARTCHE
+
+  rts
+
+tab:
+
+  stp
+
+  lda COLUMN
+  eor #3        ; how many cols left until tab?
+: ldx #$10      ; space
+  stx V_DATA0
+  ldx CURCLR
+  stx V_DATA0
+  dea
+  bne :-
 
   rts
