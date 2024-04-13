@@ -52,13 +52,14 @@ CARTCHE = $25   ; cartouche on/off
 COLOURS = $26   ; to $35 - 16 bytes
 INDEX_L = $36   ; low byte of 16 bit address
 INDEX_H = $37   ; high byte of 16 bit address
-AUTHOR  = $38   ; author name (to $37 - 16 bytes)
-TITLE   = $48   ; title name (to $67 - 32 bytes)
-TVRAM_L = $49   ; \_ temp storage for old VRAM address
-TVRAM_M = $4A   ; /- used in `cartouche`
-TTAB    = $4B   ; temp address for subtraction in `tab`
-LINE    = $4B   ; current line
-COLUMN  = $4C   ; current column
+NAMELEN = $38   ; how long do we need this to be
+AUTHOR  = $39   ; author name (to $37 - 16 bytes)
+TITLE   = $49   ; title name (to $67 - 32 bytes)
+TVRAM_L = $68   ; \_ temp storage for old VRAM address
+TVRAM_M = $69   ; /- used in `cartouche`
+TTAB    = $6A   ; temp address for subtraction in `tab`
+LINE    = $6B   ; current line
+COLUMN  = $6C   ; current column
 TXSTART = $A000 ; text data start (to $BFFF - 2048 bytes)
 
 FONT: .literal "FONT.BIN"
@@ -71,7 +72,7 @@ DEFAULTCLR: .byte $44,$04,$FF,$0F,$44,$0F,$F4,$0F,$F4,$04,$FF,$04,$4F,$04,$4F,$0
 ;;                   ni  li  pona ala pona    cs  c3  T   cs  c4  E   c6  S   T       soweli sewi sc  monsi .   tan :   ec  nl  c2  cs  c1  mi  wawa a   nl  1   tb  mi  ike ala nl  2   tb  mi  ike ala eof
 ;TESTMESSAGE: .byte $B1,$92,$C5, $62,$C5,$10,$F8,$F3,$54,$F8,$F4,$45,$F6,$53,$54,$10,$D4,   $CB, $ED,$A5,  $EB,$D9,$EC,$EE,$F9,$f2,$f8,$F1,$A0,$E8, $60,$F9,$01,$FA,$A0,$6F,$62,$F9,$02,$FA,$A0,$6F,$62,$FF
 
-TESTMESSAGE: .byte $34,$25,$33,$34,$F9,$01,$FA,$34,$25,$33,$34,$F9,$02,$FA,$FA,$34,$25,$33,$34,$FF
+TESTMESSAGE: .byte $F8,$F2,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$34,$F9,$F3,$25,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$25,$F9,$F3,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$25,$F9,$F4,$33,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$33,$F9,$F4,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$33,$F9,$F5,$34,$FA,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$34,$F9,$F5,$FA,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$34,$FF
 
 ;TESTMESSAGE: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255
 ;-----------------------------
@@ -296,7 +297,7 @@ checkchar:
   bcc :+        ; if not, branch
   jsr checkmeta
   bra nextindex
-  
+
 : cmp #$EE      ; character == $EE? (cartouche end)
   bcc :+        ; if not, branch
   stz CARTCHE   ; cartouche off
@@ -350,6 +351,22 @@ checkmeta:
 : cmp #$F9
   bne :+
   jsr nextline
+
+: cmp #$FB
+  bne :+
+  ldy #32       ; title length
+  sty NAMELEN
+  ldx #$10      ; offset from AUTHOR to TITLE
+  jsr name
+
+: cmp #$FC
+  bne :+
+  ldy #16       ; author length
+  sty NAMELEN
+  ldx #0        ; no offset
+  jsr name
+
+  ; if $FD isn't preceded by either $FB or $FC and then some other stuff, ignore it
 
 : rts
 
@@ -425,14 +442,15 @@ nextline:
 
 tab:
 
-  stp
+; stp
 
   lda COLUMN
-  and #3
-  stx #4
-  
+  and #3      ; mod 4
+  sta TTAB
+  lda #4
   sec
   sbc TTAB
+ 
 : ldx #$10      ; space
   stx V_DATA0
   ldx CURCLR
@@ -441,3 +459,23 @@ tab:
   bne :-
 
   rts
+
+name:
+
+  inc INDEX_L
+  bne :+
+  inc INDEX_H
+  lda (INDEX_L)
+
+: cmp #$FD
+  beq :+
+
+  sta AUTHOR,x
+  inx
+
+  cpx NAMELEN ; are we over the limit yet?
+  bcs :+      ; make sure to branch if it somehow gets bigger than NAMELEN
+
+  bra name
+
+: rts
