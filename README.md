@@ -2,7 +2,7 @@
 
 ## ni li seme?
 
-ilo Isi li ilo sitelen, li pali musi mi  ona li pona ala. kipisi ali li lon ala. taso, ona li lon.
+ilo Isi li ilo sitelen, li pali musi mi. ona li pona ala. kipisi ali li lon ala. taso, ona li lon.
 
 ## mi o seme?
 
