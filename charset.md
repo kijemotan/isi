@@ -17,3 +17,20 @@
 |$Dx|sinpin|sitelen|soko|sona|soweli|suli|suno|supa|suwi|tan|taso|tawa|telo|tenpo|toki|tomo|
 |$Ex|tonsi|tu|unpa|uta|utala|walo|wan|waso|wawa|weka|wile|‧|⁚|[sc]|[ec]|[ls]|
 |$Fx|[c0]|[c1]|[c2]|[c3]|[c4]|[c5]|[c6]|[c7]|[cs]|[nl]|[tb]|[ns]|[nj]|[pn]|[ni]|[eof]|
+
+---
+
+## control characters
+
+|nanpa|nimi lili|kon|kon pi toki Inli|
+|-----|---------|---|----------------|
+|$EF|ls|*l*ipu *s*in|new page|
+|$F0-F7|c0-c7|ante kule|change *c*olour|
+|$F8|cs|ante pi len kule (fg<->bg)|*s*witch selected *c*olour (fg<->bg)|
+|$F9|nl|linja sin|*n*ew *l*ine|
+|$FA|tb|ala suli|*t*a*b*|
+|$FB|ns|*n*imi *s*itelen|title|
+|$FC|nj|*n*imi pi *j*an pali|author title|
+|$FD|pn|*p*ini *n*imi|title end
+|$FE|ni|*n*anpa pi *i*lo Isi|version number|
+|$FF|eof|pini lipu|*e*nd *o*f *f*ile|
