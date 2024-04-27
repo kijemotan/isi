@@ -2,10 +2,11 @@
  ; of the x16 discord, who
   ; helped me understand how
    ; this whole thing works.
-    ; especially squall_ff8, the
-     ; writer of some of this code
-      ; (you can probably find it in
-       ; #asm-dev lol)     - ss[motan]
+    ; especially squall_ff8 and
+     ; mooinglemur, the writers of
+      ; some of this code (you can
+       ; probably find it in #asm-dev
+        ; lol)     - ss[motan]
 
 .segment "STARTUP"
 .segment "INIT"
@@ -18,9 +19,15 @@
 ; $04001-$0FFFF -> text
 
 ; KERNAL calls
-LOAD    = $FFD5
+KBDPEEK = $FEBD
+MEMCOPY = $FEE7
 SETLFS  = $FFBA
 SETNAM  = $FFBD
+LOAD    = $FFD5
+GETIN   = $FFE4
+
+; KERNAL vectors
+CINV    = $0314 ; 2 bytes - to $0315
 
 ; VERA registers
 V_ADDRx_L     = $9F20 ; VERA address low byte
@@ -45,40 +52,76 @@ PALETTE   = $1FA00  ; palette data (to $1FBFF)
 
 ; RAM addresses
 BANK    = $00
-CLCOUNT = $22   ; unused
-CURCLR  = $23   ; current color
-CLRSEL  = $24   ; select fg/bg color change
-CARTCHE = $25   ; cartouche on/off
-COLOURS = $26   ; to $35 - 16 bytes
+r0_L    = $02
+r0_H    = $03
+r1_L    = $04
+r1_H    = $05
+r2_L    = $06
+r2_H    = $07
+r3_L    = $08
+r3_H    = $09
+r4_L    = $0A
+r4_H    = $0B
+r5_L    = $0C
+r5_H    = $0D
+CURCLR  = $22   ; current color
+CLRSEL  = $23   ; select fg/bg color change
+CARTCHE = $24   ; cartouche on/off
+COLOURS = $25   ; to $35 - 16 bytes
 INDEX_L = $36   ; low byte of 16 bit address
 INDEX_H = $37   ; high byte of 16 bit address
 NAMELEN = $38   ; how long do we need this to be
-AUTHOR  = $39   ; author name (to $37 - 16 bytes)
-TITLE   = $49   ; title name (to $67 - 32 bytes)
-TVRAM_L = $68   ; \_ temp storage for old VRAM address
-TVRAM_M = $69   ; /- used in `cartouche`
-TTAB    = $6A   ; temp address for subtraction in `tab`
-LINE    = $6B   ; current line
-COLUMN  = $6C   ; current column
-CINDX_L = $6D   ; low byte of cursor index
-CINDX_H = $6E   ; high byte of cursor index
-ERRORID = $6F   ; error id
-VERSION = $70   ; version number
+AUTHOR  = $39   ; author name (to $48 - 16 bytes)
+TITLE   = $49   ; title name (to $68 - 32 bytes)
+TVRAM_L = $69   ; \_ temp storage for old VRAM address
+TVRAM_M = $6A   ; /- used in `cartouche`
+TTAB    = $6B   ; temp address for subtraction in `tab`
+LINE    = $6C   ; current line
+COLUMN  = $6D   ; current column
+CINDX_L = $6E   ; low byte of cursor index
+CINDX_H = $6F   ; high byte of cursor index
+ERRORID = $70   ; error id
+VERSION = $71   ; version number
+CTIMER  = $72   ; how many frames until cursor sprite toggles on/off
+CHANGED = $73   ; did something change
+CHARACT = $74
+MODE    = $75   ; $00 - input
+TXLEN_L = $76   ; low byte of character count
+TXLEN_H = $77   ; high byte of character count
+TCINX_L = $78   ; low byte of temp index for charcount
+TCINX_H = $79   ; high byte of temp index for charcount
+
 TXSTART = $A000 ; text data start (to $BFFF - 2048 bytes)
 
 FONT: .literal "FONT.BIN"
 TEXT: .literal "MOTAN.ISI"
 ERROR: .byte $F2,$70,$92,$B9,$FF
 
+        ; translate from PETSCII to ISI encoding, $FF - ignore
+        ;      x0  x1  x2  x3  x4  x5  x6  x7  x8  x9  xA  xB  xC  xD  xE  xF
+KEYMAP: .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$F9,$FF,$FF ;0x
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;1x
+        .byte $10,$11,$12,$13,$FF,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F ;2x
+        .byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B,$0C,$0D,$0E,$0F ;3x
+        .byte $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$2A,$2B,$2C,$2D,$2E,$2F ;4x
+        .byte $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$3A,$3B,$FF,$3D,$3E,$3F ;5x
+        .byte $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4A,$4B,$4C,$4D,$4E,$4F ;6x
+        .byte $50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$5A,$FF,$FF,$FF,$FF,$FF ;7x
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;8x
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;9x
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;Ax
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;Bx
+        .byte $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$4A,$4B,$4C,$4D,$4E,$4F ;Cx
+        .byte $50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$5A,$FF,$FF,$FF,$FF,$FF ;Dx
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;Ex
+        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;Fx
+
+
 ; 8 colours:        #444    #FFF    #F44    #FF4    #4F4    #4FF    #44F    #F4F    #444
 DEFAULTCLR: .byte $44,$04,$FF,$0F,$44,$0F,$F4,$0F,$F4,$04,$FF,$04,$4F,$04,$4F,$0F,$44,$04
-; ca65 is deciding to only store 6 of them in the list file. wtf.
 
-;;                   ni  li  pona ala pona    cs  c3  T   cs  c4  E   c6  S   T       soweli sewi sc  monsi .   tan :   ec  nl  c2  cs  c1  mi  wawa a   nl  1   tb  mi  ike ala nl  2   tb  mi  ike ala eof
-;TESTMESSAGE: .byte $B1,$92,$C5, $62,$C5,$10,$F8,$F3,$54,$F8,$F4,$45,$F6,$53,$54,$10,$D4,   $CB, $ED,$A5,  $EB,$D9,$EC,$EE,$F9,$f2,$f8,$F1,$A0,$E8, $60,$F9,$01,$FA,$A0,$6F,$62,$F9,$02,$FA,$A0,$6F,$62,$FF
-;TESTMESSAGE: .byte $F8,$F2,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$FA,$34,$F9,$F3,$25,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$25,$F9,$F3,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$FA,$25,$F9,$F4,$33,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$33,$F9,$F4,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$FA,$33,$F9,$F5,$34,$FA,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$34,$F9,$F5,$FA,$FA,$FA,$34,$21,$22,$10,$34,$25,$33,$34,$FA,$34,$F9,$F6,$54,$FA,$45,$FA,$53,$FA,$54,$FA,$54,$FA,$45,$FA,$53,$FA,$54,$FF
-;TESTMESSAGE: .byte 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255
-;TESTMESSAGE: .byte $FB,$B2,$D1,$FD,$FC,$B2,$64,$FD,$FF
+oldirq: .res 2
+
 ;-----------------------------
 
 start:
@@ -152,38 +195,83 @@ start:
 
   jsr L0_clearloop
 
-  stp
+; stp
 
   lda #$FF
   sta TXSTART ; makes sure `update` doesn't break when there's nothing to load
 
-  lda #$09
-  ldx #<TEXT
-  ldy #>TEXT
-  jsr SETNAM
-
-  lda #$01
-  ldx #$08
-  ldy #$00
-  jsr SETLFS
-
-  lda #$00
-  ldx #<TXSTART ; should point to 1:$a000
+  ldx #(<TXSTART+1)
   ldy #>TXSTART
-  jsr LOAD
 
-  bcc :++
-  sta ERRORID
-  ldx #0
-: lda ERROR,x
-  sta TXSTART,x
-  cmp #$FF
-  beq :+
-  inx
-  bra :-
+; lda #$09
+; ldx #<TEXT
+; ldy #>TEXT
+; jsr SETNAM
+;
+; lda #$01
+; ldx #$08
+; ldy #$00
+; jsr SETLFS
+;
+; lda #$00
+; ldx #<TXSTART ; should point to 1:$a000
+; ldy #>TXSTART
+; jsr LOAD
+
+  stx CINDX_L   ; put cursor after the end of loaded text
+  sty CINDX_H
+
+;  bcc :++
+;  sta ERRORID
+;  ldx #0
+;: lda ERROR,x
+;  sta TXSTART,x
+;  cmp #$FF
+;  beq :+
+;  inx
+;  bra :-
+
+: lda #1
+  sta CHANGED
+
+; stp
+  stz r0_L      ; set up 16 bit registers for memory_copy
+  lda #$01      ; r0 = $A000, r1 = $A001
+  sta r1_L
+  lda #$A0
+  sta r0_H
+  sta r1_H
+
+  lda CINDX_L   ; put cursor AT the end of loaded text
+  bne :+
+  dec CINDX_H
+: dec CINDX_L
+
+  ; setup vblank
+  php       
+  sei
+  lda CINV
+  sta oldirq
+  lda CINV+1
+  sta oldirq+1
+  lda #<vblank
+  sta CINV
+  lda #>vblank
+  sta CINV+1
+  cli
+  plp
+
+  jsr update
+
+; stp
+
+loop:
+  nop
+  bra loop
+; stp
 
 ;   ldx #0
-;   stp
+; ; stp
 ; : lda TESTMESSAGE,x
 ;   sta TXSTART,x
 ;   cmp #$FF
@@ -192,14 +280,52 @@ start:
 ;   inx
 ;   bra :-
 
-: jsr update
+;----------------------------- user input
 
-; loop:
-;   inc TESTMESSAGE
-;   jsr update
-;   bra loop
+userinput:
 
+; stp
+
+  jsr GETIN
+; stp
+  bne :+        ; if you didn't read anything, skip 
   rts
+: tax 
+  lda #1
+  sta CHANGED
+  lda KEYMAP,x
+; stp
+  cmp #$FF      ; refer to comment right before KEYMAP
+  beq userinput
+  pha
+
+  ldy MODE
+  bne userinput ; if mode != 0 (edit), skip
+
+  lda (CINDX_L) ; load whatever the cursor's on
+  cmp #$FF      ; is it at the end?
+  beq :+        ; if so, skip the setup
+
+  jsr cursorcharcount
+
+  ldx CINDX_L
+  stx r0_L
+  inx
+  stx r1_L
+
+  ldx TXLEN_L   ; r2 = character count
+  stx r2_L
+  ldx TXLEN_H
+  stx r2_H
+
+  jsr MEMCOPY
+
+: pla
+  sta (CINDX_L)
+  inc CINDX_L
+  bne userinput
+  inc CINDX_H
+  bra userinput ; next character in buffer
 
 ;----------------------------- colour loading
 
@@ -282,7 +408,7 @@ RAM_clearloop:
   sta INDEX_L
   lda #>TXSTART
   sta INDEX_H
-: lda #$10
+: lda #$FF
   sta (INDEX_L)
   inc INDEX_L
   lda INDEX_L
@@ -307,6 +433,9 @@ nextindex:
 update:
 
 ; stp
+
+  stz CHANGED
+  stz CLRSEL
 
   lda #(1<<4 + ^L0_START) ; set cursor to upper left
   sta V_ADDRx_H
@@ -336,7 +465,7 @@ checkchar:
 
 : cmp #$EE      ; character == $EE? (cartouche end)
   bcc :+        ; if not, branch
-  stp
+; stp
   stz CARTCHE   ; cartouche off
 
 : pha
@@ -368,7 +497,7 @@ checkchar:
 
 checkmeta:
 
-  stp
+; stp
 
   cmp #$FA
   bne :+
@@ -405,7 +534,7 @@ checkmeta:
   ldx #0        ; no offset
   jsr name
 
-  ; if $FD isn't preceded by either $FB or $FC and then some other stuff, ignore it
+  ; if $FD isn't preceded by either $FB or $FC at some point, ignore it
   
   cmp #$FE
   bne :+
@@ -531,3 +660,39 @@ name:
   bra name
 
 : rts
+
+;----------------------------- count characters
+
+cursorcharcount:
+
+  lda CINDX_L   ; set TCINX to the current cursor pos
+  sta TCINX_L
+  lda CINDX_H
+  sta TCINX_H
+
+  lda (TCINX_L) ; get character
+  cmp #$FF      ; is this the end?
+  bne :+        ; if not...
+  rts           ;           done!
+
+: inc TCINX_L
+  bne :+
+  inc TCINX_H
+
+: inc TXLEN_L
+  bne cursorcharcount
+  inc TXLEN_H
+  bra cursorcharcount
+
+;----------------------------- vblank
+
+vblank:
+
+; stp
+
+  jsr userinput
+  lda CHANGED
+  beq :+      ; if nothing changed, don't update
+  jsr update
+
+: jmp (oldirq)
