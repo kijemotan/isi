@@ -49,6 +49,7 @@ L0_START  = $00000  ; text
 L1_START  = $02000  ; cartouche lines, maybe menus?
 CHARSET   = $04000  ; to $04FFF
 PALETTE   = $1FA00  ; palette data (to $1FBFF)
+C0        = $1F9C0  ; vera channel 1 (2 bytes freq, r/l+6b volume, 2b waveform+6b width)
 
 ; RAM addresses
 BANK    = $00
@@ -90,6 +91,7 @@ TXLEN_L = $76   ; low byte of character count
 TXLEN_H = $77   ; high byte of character count
 TCINX_L = $78   ; low byte of temp index for charcount
 TCINX_H = $79   ; high byte of temp index for charcount
+JGTIMER = $7A   ; timer for the startup jingle
 
 TXSTART = $A000 ; text data start (to $BFFF - 2048 bytes)
 
@@ -100,7 +102,7 @@ ERROR: .byte $F2,$70,$92,$B9,$FF
         ; translate from PETSCII to ISI encoding, $FF - ignore
         ;      x0  x1  x2  x3  x4  x5  x6  x7  x8  x9  xA  xB  xC  xD  xE  xF
 KEYMAP: .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$F9,$FF,$FF ;0x
-        .byte $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;1x
+        .byte $FF,$FF,$FF,$FF,$F0,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ;1x
         .byte $10,$11,$12,$13,$FF,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F ;2x
         .byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B,$0C,$0D,$0E,$0F ;3x
         .byte $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$2A,$2B,$2C,$2D,$2E,$2F ;4x
@@ -261,6 +263,27 @@ start:
   cli
   plp
 
+startjingle:
+  lda #$15
+  sta JGTIMER
+
+  lda #(1<<4 + ^C0)
+  sta V_ADDRx_H
+  lda #>C0
+  sta V_ADDRx_M
+  lda #<C0
+  sta V_ADDRx_L
+
+  lda #$9D
+  sta V_DATA0
+  lda #$04
+  sta V_DATA0
+  lda #$FF
+  sta V_DATA0
+  lda #$50
+  sta V_DATA0
+
+
   jsr update
 
 ; stp
@@ -290,13 +313,16 @@ userinput:
 ; stp
   bne :+        ; if you didn't read anything, skip 
   rts
-: tax 
+: tax
+; stp
   lda #1
   sta CHANGED
   lda KEYMAP,x
 ; stp
   cmp #$FF      ; refer to comment right before KEYMAP
   beq userinput
+  cmp #$F0      ; backspace?
+  beq backspace
   pha
 
   ldy MODE
@@ -326,6 +352,19 @@ userinput:
   bne userinput
   inc CINDX_H
   bra userinput ; next character in buffer
+
+backspace:
+
+  lda CINDX_L
+  bne :+
+  lda CINDX_H
+  cmp #$A0
+  beq :++
+  dec CINDX_H
+: dec CINDX_L
+  lda #$FF
+  sta (CINDX_L)
+: bra userinput
 
 ;----------------------------- colour loading
 
@@ -457,6 +496,8 @@ checkchar:
   lda (INDEX_L)
   cmp #$FF      ; character >= $FF? (EOF)
   bne :+        ; if not, branch
+  lda #$10
+  sta V_DATA0
   rts
 : cmp #$EF      ; character == $EF? (visible symbol)
   bcc :+        ; if not, branch
@@ -689,10 +730,78 @@ cursorcharcount:
 vblank:
 
 ; stp
+  lda JGTIMER
+  bne :+
+  jmp next
+: dec JGTIMER
 
+  lda #(1<<4 + ^C0)
+  sta V_ADDRx_H
+  lda #>C0
+  sta V_ADDRx_M
+  lda #<C0
+  sta V_ADDRx_L
+  lda JGTIMER
+
+  cmp #$11
+  bne :+
+  lda #$3A
+  sta V_DATA0
+  lda #$09
+  sta V_DATA0
+  lda #$F9
+  sta V_DATA0
+  lda #$90
+  sta V_DATA0
+  jmp next
+
+: cmp #$0D
+  bne :+
+  lda #$D0
+  sta V_DATA0
+  lda #$05
+  sta V_DATA0
+  lda #$F3
+  sta V_DATA0
+  lda #$10
+  sta V_DATA0
+  jmp next
+
+: cmp #$09
+  bne :+
+  lda #$EA
+  sta V_DATA0
+  lda #$06
+  sta V_DATA0
+  lda #$ED
+  sta V_DATA0
+  lda #$3F
+  sta V_DATA0
+  jmp next
+
+: cmp #$05
+  bne :+
+  lda #$75
+  sta V_DATA0
+  lda #$03
+  sta V_DATA0
+  lda #$FF
+  sta V_DATA0
+  jmp next
+
+: cmp #$01
+  bne :+
+  stz V_DATA0
+  stz V_DATA0
+  stz V_DATA0
+  stz V_DATA0
+
+next:
   jsr userinput
   lda CHANGED
   beq :+      ; if nothing changed, don't update
   jsr update
+
+  
 
 : jmp (oldirq)
