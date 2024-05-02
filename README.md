@@ -9,7 +9,7 @@ ilo Isi li ilo sitelen, li pali musi mi. ona li pona ala. kipisi ali li lon ala.
 - [x] sitelen li lon lipu
 - [x] kule
 - [x] nimi
-- [ ] ken pi ante sitelen
+- [x] ken pi ante sitelen
 - [ ] lipu mute
 - [ ] lipu suli la ona ali li ken ala lon lipu
 - [ ] lipu li awen
